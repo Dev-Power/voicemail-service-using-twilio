@@ -14,7 +14,7 @@ public class IncomingCallController : TwilioController
 
     public IncomingCallController(
         ILogger<IncomingCallController> logger,
-        IOptions<VoicemailOptions> voicemailOptions
+        IOptionsSnapshot<VoicemailOptions> voicemailOptions
     )
     {
         _logger = logger;

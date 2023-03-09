@@ -28,22 +28,35 @@ public class RecordController : TwilioController
         response.Say("Hello, please leave a message after the beep.");
         response.Record(
             timeout: 10,
-            action: new Uri(Url.Action("RecordingStatus")!, UriKind.Relative),
-            method: Twilio.Http.HttpMethod.Post
+            action: new Uri(Url.Action("Bye")!, UriKind.Relative),
+            method: Twilio.Http.HttpMethod.Post,
+            recordingStatusCallback: new Uri(Url.Action("RecordingStatus")!, UriKind.Relative),
+            recordingStatusCallbackMethod: Twilio.Http.HttpMethod.Post
         );
         return TwiML(response);
     }
 
     [HttpPost]
-    public async Task<TwiMLResult> RecordingStatus(
+    public TwiMLResult Bye() => new VoiceResponse()
+        .Say("Thank you for leaving a message, goodbye.")
+        .ToTwiMLResult();
+
+    [HttpPost]
+    public async Task RecordingStatus(
+        [FromForm] string callSid,
         [FromForm] string recordingUrl,
-        [FromForm] string recordingSid
+        [FromForm] string recordingSid,
+        [FromForm] string recordingStatus
     )
     {
-        await _fileService.DownloadRecording(recordingUrl, recordingSid);
+        _logger.LogInformation(
+            "Recording status changed to {recordingStatus} for call {callSid}. Recording is available at {recordingUrl}",
+            recordingStatus, callSid, recordingUrl
+        );
 
-        var response = new VoiceResponse();
-        response.Say("Thank you for leaving a message, goodbye.");
-        return TwiML(response);
+        if (recordingStatus == "completed")
+        {
+            await _fileService.DownloadRecording(recordingUrl, recordingSid);
+        }
     }
 }
