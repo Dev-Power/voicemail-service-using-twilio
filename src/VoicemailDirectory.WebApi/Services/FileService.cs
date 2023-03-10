@@ -14,9 +14,11 @@ public class FileService
     public async Task DownloadRecording(string recordingUrl, string recordingSid)
     {
         using HttpResponseMessage response = await _httpClient.GetAsync($"{recordingUrl}.mp3");
-        await using Stream recordingFileStream = await response.Content.ReadAsStreamAsync();
-        await using var fs = new FileStream($"{_rootVoicemailPath}/{Constants.New}_{recordingSid}.mp3",
-            FileMode.CreateNew);
+        response.EnsureSuccessStatusCode();
+        await using var fs = new FileStream(
+            $"{_rootVoicemailPath}/{Constants.New}_{recordingSid}.mp3",
+            FileMode.CreateNew
+        );
         await response.Content.CopyToAsync(fs);
     }
 

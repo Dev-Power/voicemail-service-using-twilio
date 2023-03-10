@@ -53,7 +53,12 @@ public class DirectoryController : TwilioController
         var allMessages = _fileService.GetRecordingSids(string.Empty)
             .OrderBy(s => s)
             .ToList();
-        PlayNextMessageResponse(response, allMessages);
+
+        response.Append(
+            CreateGatherTwiml(allMessages)
+                .Append(PlayNextMessage(allMessages))
+                .Append(SayOptions())
+        );
 
         return TwiML(response);
     }
@@ -73,6 +78,7 @@ public class DirectoryController : TwilioController
         var isCurrentMessageNew = currentMessage.StartsWith(Constants.New);
 
         var response = new VoiceResponse();
+
         switch (digits)
         {
             case 1: // Replay
@@ -91,7 +97,11 @@ public class DirectoryController : TwilioController
 
             default: // Invalid key. Play error message then replay the last message.
                 response.Say("Sorry, that key is not valid.");
-                break;
+                response.Append(
+                    CreateGatherTwiml(queuedMessages)
+                        .Append(SayOptions())
+                );
+                return TwiML(response);
         }
 
         if (queuedMessages.Count == 0)
@@ -105,28 +115,32 @@ public class DirectoryController : TwilioController
             response.Say("No more new messages. Here are your saved messages.");
         }
 
-        PlayNextMessageResponse(response, queuedMessages);
+        response.Append(
+            CreateGatherTwiml(queuedMessages)
+                .Append(PlayNextMessage(queuedMessages))
+                .Append(SayOptions())
+        );
 
         return TwiML(response);
     }
 
-    private void PlayNextMessageResponse(VoiceResponse response, List<string> queuedMessages)
+    private Gather CreateGatherTwiml(List<string> queuedMessages) => new Gather(
+        input: new List<Gather.InputEnum> {Twilio.TwiML.Voice.Gather.InputEnum.Dtmf},
+        timeout: 5,
+        numDigits: 1,
+        action: new Uri(
+            Url.Action("Gather", new {queuedMessages})!,
+            UriKind.Relative
+        ),
+        method: Twilio.Http.HttpMethod.Post
+    );
+
+    private Say SayOptions()
+        => new Say("To replay press 1. To save the message press 2. To delete the message press 3.");
+
+    private Play PlayNextMessage(List<string> queuedMessages)
     {
         var nextMessage = queuedMessages.First();
-
-        var gather = new Gather(
-            input: new List<Gather.InputEnum> {Twilio.TwiML.Voice.Gather.InputEnum.Dtmf},
-            timeout: 5,
-            numDigits: 1,
-            action: new Uri(
-                Url.Action("Gather", new {queuedMessages})!,
-                UriKind.Relative
-            ),
-            method: Twilio.Http.HttpMethod.Post
-        );
-        gather.Play(new Uri($"/Voicemails/{nextMessage}.mp3", UriKind.Relative));
-        gather.Say("To replay press 1. To save the message press 2. To delete the message press 3.");
-        
-        response.Append(gather);
+        return new Play(new Uri($"/Voicemails/{nextMessage}.mp3", UriKind.Relative));
     }
 }
