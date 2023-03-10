@@ -95,7 +95,7 @@ public class DirectoryController : TwilioController
                 queuedMessages.Remove(currentMessage);
                 break;
 
-            default: // Invalid key. Play error message then replay the last message.
+            default: // Invalid key. Play an error message an repeat the valid options.
                 response.Say("Sorry, that key is not valid.");
                 response.Append(
                     CreateGatherTwiml(queuedMessages)
